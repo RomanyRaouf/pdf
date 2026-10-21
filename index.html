@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>تحويل الصور إلى PDF</title>
+  <style>
+    body {
+      font-family: Cairo, sans-serif;
+      text-align: center;
+      margin: 20px;
+    }
+    #images {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    #images img {
+      max-width: 200px;
+      border: 2px solid #333;
+      border-radius: 8px;
+      padding: 5px;
+      background: #f9f9f9;
+    }
+    .input-group {
+      margin-bottom: 15px;
+    }
+    input[type="text"] {
+      padding: 8px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      width: 250px;
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>تحويل الصور إلى PDF إعداد روماني رؤوف</h2>
+
+  <!-- رفع الصور -->
+  <input type="file" id="upload" multiple accept="image/*"><br><br>
+
+  <!-- عرض الصور -->
+  <div id="images"></div>
+
+  <!-- حقل إدخال اسم الملف -->
+  <div class="input-group">
+    <label for="fileName">اسم الملف:</label><br>
+    <input type="text" id="fileName" value="" placeholder="أدخل اسم الملف هنا">
+  </div>
+
+  <!-- زر التحويل -->
+  <button id="download">تحميل PDF</button>
+
+  <!-- مكتبات jsPDF و html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <script>
+    const upload = document.getElementById("upload");
+    const imagesDiv = document.getElementById("images");
+    const downloadBtn = document.getElementById("download");
+    const fileNameInput = document.getElementById("fileName");
+
+    // عرض الصور بعد رفعها
+    upload.addEventListener("change", () => {
+      imagesDiv.innerHTML = "";
+      Array.from(upload.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = document.createElement("img");
+          img.src = e.target.result;
+          imagesDiv.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    // تحويل الصور إلى PDF مع ضبط الاتجاه
+    downloadBtn.addEventListener("click", async () => {
+      const { jsPDF } = window.jspdf;
+      const imgs = imagesDiv.querySelectorAll("img");
+      
+      if (imgs.length === 0) {
+        alert("الرجاء اختيار صور أولاً!");
+        return;
+      }
+
+      let pdf = null;
+
+      for (let i = 0; i < imgs.length; i++) {
+        const img = imgs[i];
+        const canvas = await html2canvas(img, { scale: 2 }); // جودة أعلى
+        const imgData = canvas.toDataURL("image/png");
+
+        // تحديد الاتجاه حسب أبعاد الصورة
+        const orientation = canvas.width > canvas.height ? "l" : "p";
+        const pageWidth = orientation === "l" ? 297 : 210; // A4 landscape أو portrait
+        const pageHeight = orientation === "l" ? 210 : 297;
+
+        if (i === 0) {
+          pdf = new jsPDF(orientation, "mm", "a4");
+        } else {
+          pdf.addPage("a4", orientation);
+        }
+
+        pdf.addImage(imgData, "PNG", 0, 0, pageWidth, pageHeight);
+      }
+
+      // جلب الاسم المدخل أو وضع اسم افتراضي في حال ترك الحقل فارغاً
+      let customName = fileNameInput.value.trim();
+      if (!customName) {
+        customName = "document";
+      }
+
+      // التأكد من أن الامتداد .pdf موجود
+      if (!customName.toLowerCase().endsWith(".pdf")) {
+        customName += ".pdf";
+      }
+
+      pdf.save(customName);
+    });
+  </script>
+</body>
+</html>
